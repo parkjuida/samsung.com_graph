@@ -3,12 +3,18 @@ import requests
 from selenium.webdriver import Chrome
 from urllib.parse import unquote
 
+from selenium import webdriver
+
 from samsung_dot_com_html_parser import SamsungDotComHTMLParser
 
-driver = Chrome(executable_path="C://WebDriver//bin//chromedriver.exe")
+op = webdriver.ChromeOptions()
+op.add_argument("--headless")
+
+driver = Chrome(executable_path="C://WebDriver//bin//chromedriver.exe", options=op)
 
 
 def handle_current_page(page_url):
+    print("this page: ", page_url)
     driver.get(page_url)
     net_data = driver.execute_script("var performance = window.performance "
                                      "|| window.mozPerformance "
@@ -26,7 +32,7 @@ def handle_current_page(page_url):
                 k, v = s.split("=")
                 page_attributes[k] = v
     except IndexError:
-        print("indexError", smetric)
+        print("indexError", page_url, smetric)
 
     response = requests.get(page_url)
     html_parser = SamsungDotComHTMLParser()
@@ -37,21 +43,31 @@ def handle_current_page(page_url):
 
 queue = []
 visited = set()
+links = []
 
-queue.append("http://www.samsung.com/uk")
+queue.append("http://www.samsung.com/uk/offer/samsung-s20-sero-lifestyle-tv-deal/")
 
 while len(queue) != 0:
     current_page = queue.pop(0)
     page_attr, next_pages = handle_current_page(current_page)
     if not page_attr:
-        print("page_Attr none", next_pages)
+        print("page_Attr none")
         continue
     visited.add(page_attr['c39'])
     print(page_attr['c39'])
 
     for next_page in next_pages:
-        url: str = next_page['href']
-        if not url.startswith(('www', 'http://')):
+        url: str = next_page['href'].strip(" ")
+        if url.startswith("//"):
+            url = url[2:]
+        elif url.startswith("/"):
             url = f'http://www.samsung.com{url}'
-        if url not in visited:
+        elif url.startswith("www"):
+            url = f'http://{url}'
+
+        links.append((current_page, next_page, f'{next_page["class"]},{next_page["an_ac"]},{next_page["an_ca"]},{next_page["an_la"]},'))
+        if url not in visited and url not in queue:
             queue.append(url)
+
+
+print(links)
